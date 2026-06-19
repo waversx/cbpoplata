@@ -1,0 +1,408 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Оплата через СБП</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Arial, Helvetica, sans-serif; }
+
+.page { display: none; flex-direction: column; min-height: 100vh; }
+.page.active { display: flex; }
+
+.hdr { background: #fff; padding: 14px 14px 8px; border-bottom: 1px solid #eeeff3; }
+.hdr-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.hdr-back { background: #f4f5f8; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #333; font-size: 17px; cursor: pointer; }
+.hdr-center { text-align: center; }
+.hdr-ttl { font-size: 17px; font-weight: 700; color: #1a1a2e; }
+.hdr-sub { font-size: 12px; color: #9098b1; margin-top: 2px; }
+
+/* СБП LOGO */
+.sbp-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #f0faf4; border: 1.5px solid #d0edd9;
+  border-radius: 12px; padding: 8px 14px;
+}
+.sbp-logo { width: 36px; height: 24px; display: flex; align-items: center; justify-content: center; }
+.sbp-logo svg { width: 36px; height: 24px; }
+.sbp-label { font-size: 14px; font-weight: 700; color: #1a7a3f; letter-spacing: 0.5px; }
+.sbp-desc { font-size: 11px; color: #5a9e72; }
+
+/* RECIPIENT */
+.recip-card {
+  background: #fff; margin: 12px 14px 0; border-radius: 18px;
+  padding: 16px; display: flex; align-items: center; gap: 14px;
+}
+.recip-ava {
+  width: 54px; height: 54px; border-radius: 16px;
+  background: #e8f7ee; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: #1a7a3f; flex-shrink: 0;
+}
+.recip-name { font-size: 16px; font-weight: 700; color: #1a1a2e; }
+.recip-phone { font-size: 13px; color: #9098b1; margin-top: 3px; }
+.recip-verified {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #e8f7ee; border-radius: 8px; padding: 3px 8px;
+  font-size: 11px; font-weight: 600; color: #1a7a3f; margin-top: 6px;
+}
+
+.body { padding: 12px 14px 40px; display: flex; flex-direction: column; gap: 10px; }
+
+.card { background: #fff; border-radius: 18px; padding: 16px; }
+
+.lbl { font-size: 11px; color: #9098b1; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 12px; }
+
+/* AMOUNT */
+.amt-wrap { display: inline-flex; align-items: flex-end; gap: 4px; margin-bottom: 8px; }
+.amt-inp {
+  font-size: 44px; font-weight: 800; color: #1a1a2e;
+  border: none; background: transparent; outline: none;
+  width: 180px; max-width: 100%; font-family: inherit; letter-spacing: -2px; text-align: right; line-height: 1;
+}
+.amt-rub { font-size: 30px; font-weight: 700; color: #1a1a2e; align-self: flex-end; line-height: 1; padding-bottom: 4px; }
+.amt-line { height: 3px; background: linear-gradient(90deg, #1db954, #0faa4a); border-radius: 2px; margin-bottom: 16px; }
+
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  border: 1.5px solid #d8dce8; border-radius: 22px;
+  padding: 7px 15px; font-size: 13px; font-weight: 600;
+  color: #444; background: #f8f9fc; cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.chip.on { background: #1db954; color: #fff; border-color: #1db954; }
+
+/* BANK ROW */
+.bank-row { display: flex; align-items: center; gap: 12px; padding: 14px 14px; cursor: pointer; border-radius: 18px; border: 1px solid transparent; background: #fff; transition: background 0.18s ease, border-color 0.18s ease; }
+.bank-row + .bank-row { margin-top: 10px; }
+.bank-ico {
+  width: 42px; height: 42px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; flex-shrink: 0;
+}
+
+.bank-row.bank-selected { background: #eef8f0; border-color: #cbe7d2; }
+.bank-row .bank-check { display: flex; }
+.bank-name { font-size: 15px; font-weight: 600; color: #1a1a2e; }
+.bank-hint { font-size: 12px; color: #9098b1; margin-top: 2px; }
+.bank-arr { color: #d0d4e0; font-size: 22px; margin-left: auto; }
+.bank-check { width: 24px; height: 24px; border-radius: 50%; background: #1db954; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; margin-left: auto; }
+
+/* TOTAL */
+.total-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; font-size: 14px; }
+.total-row + .total-row { border-top: 1px solid #f2f3f7; }
+.tk { color: #9098b1; }
+.tv { font-weight: 700; color: #1a1a2e; }
+.tv.ok { color: #1a7a3f; }
+
+/* BUTTON */
+.pay-btn {
+  width: 100%; border: none; border-radius: 16px;
+  padding: 18px; font-size: 17px; font-weight: 800;
+  cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: #1db954; color: #fff;
+  transition: background 0.12s, transform 0.1s;
+}
+.pay-btn:active { transform: scale(0.98); background: #18a048; }
+.pay-btn:disabled { background: #b0b8cc; }
+.pay-btn svg { width: 22px; height: 22px; }
+
+.secure { display: flex; align-items: center; justify-content: center; gap: 5px; color: #b0b8cc; font-size: 12px; margin-top: 8px; }
+
+/* PROCESSING */
+.proc-page {
+  background: #1a1a2e; flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: #fff; min-height: 100vh; gap: 0;
+}
+.proc-sbp { margin-bottom: 32px; opacity: 0.9; }
+.proc-ring {
+  width: 70px; height: 70px; border-radius: 50%;
+  border: 4px solid rgba(29,185,84,0.25); border-top: 4px solid #1db954;
+  animation: spin 0.85s linear infinite; margin-bottom: 28px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.proc-steps { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; width: 240px; }
+.proc-step { display: flex; align-items: center; gap: 12px; font-size: 14px; color: rgba(255,255,255,0.5); }
+.proc-step.done { color: #1db954; }
+.proc-step.active { color: #fff; }
+.proc-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.2); flex-shrink: 0; }
+.proc-step.done .proc-dot { background: #1db954; }
+.proc-step.active .proc-dot { background: #fff; animation: pulse 0.8s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+/* SUCCESS */
+.ok-page {
+  background: #fff; flex: 1;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 60px 24px 50px; min-height: 100vh;
+}
+.ok-top { display: flex; flex-direction: column; align-items: center; margin-bottom: 32px; }
+.ok-anim { position: relative; width: 96px; height: 96px; margin-bottom: 24px; }
+.ok-circle {
+  width: 96px; height: 96px; border-radius: 50%;
+  background: #e8f7ee; display: flex; align-items: center; justify-content: center;
+  font-size: 44px; color: #1db954;
+}
+.ok-ring1 { position: absolute; inset: 0; border-radius: 50%; border: 3px solid #1db954; animation: ripple 1.2s ease-out 0.1s both; }
+.ok-ring2 { position: absolute; inset: -8px; border-radius: 50%; border: 2px solid #1db954; animation: ripple 1.2s ease-out 0.35s both; opacity: 0.4; }
+@keyframes ripple { 0%{transform:scale(0.7);opacity:1;} 100%{transform:scale(1.5);opacity:0;} }
+.ok-ttl { font-size: 26px; font-weight: 800; color: #1a1a2e; margin-bottom: 6px; }
+.ok-sub { font-size: 14px; color: #9098b1; text-align: center; }
+
+.ok-amount-block { text-align: center; margin-bottom: 28px; }
+.ok-amount { font-size: 48px; font-weight: 800; color: #1db954; letter-spacing: -2px; }
+.ok-amt-lbl { font-size: 13px; color: #b0b8cc; margin-top: 4px; }
+
+.ok-card {
+  width: 100%; background: #f8f9fc; border-radius: 18px;
+  padding: 16px; margin-bottom: 24px;
+}
+.ok-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; padding: 8px 0; }
+.ok-row + .ok-row { border-top: 1px solid #eeeef3; }
+.ok-l { color: #9098b1; }
+.ok-r { font-weight: 700; color: #1a1a2e; }
+.ok-r.green { color: #1a7a3f; }
+
+.ok-btn {
+  width: 100%; background: #1db954; color: #fff; border: none;
+  border-radius: 16px; padding: 17px; font-size: 16px; font-weight: 800;
+  cursor: pointer; font-family: inherit; margin-bottom: 10px;
+}
+.ok-btn2 {
+  width: 100%; background: #f4f5f8; color: #444; border: none;
+  border-radius: 16px; padding: 15px; font-size: 15px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+
+/* SBP SVG logo inline */
+.sbp-svg-big { width: 48px; height: 32px; }
+</style>
+</head>
+<body>
+
+<!-- MAIN PAGE -->
+<div class="page active" id="p-main">
+  <div class="hdr">
+    <div class="hdr-top">
+      <button class="hdr-back" onclick="history.back()">&#8592;</button>
+      <div class="hdr-center">
+        <div class="hdr-ttl">Быстрый платёж</div>
+        <div class="hdr-sub">Система быстрых платежей</div>
+      </div>
+      <div style="width:38px"></div>
+    </div>
+
+  </div>
+
+  <div class="recip-card" style="margin:12px 14px 0;">
+    <div class="recip-ava">ЛС</div>
+    <div>
+      <div class="recip-name">Леонид С.</div>
+      <div class="recip-phone">Альфа банк &bull; &bull; &bull; &bull; 6407</div>
+      <div class="recip-verified">&#10003;&nbsp;Получатель проверен</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="card">
+      <div class="lbl">Сумма перевода</div>
+      <div class="amt-wrap">
+        <input class="amt-inp" id="ainp" type="tel" value="100" maxlength="6" aria-label="Сумма">
+        <span class="amt-rub">&#8381;</span>
+      </div>
+      <div class="amt-line"></div>
+      <div class="chips">
+        <button class="chip on" onclick="setAmt(100)">100 &#8381;</button>
+        <button class="chip" onclick="setAmt(250)">250 &#8381;</button>
+        <button class="chip" onclick="setAmt(500)">500 &#8381;</button>
+        <button class="chip" onclick="setAmt(1000)">1000 &#8381;</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="lbl">Банк списания</div>
+      <div class="bank-row bank-selected" id="bank-vtb" onclick="selectBank('vtb')">
+        <div class="bank-ico" style="background:#e8f5ff;color:#0066cc;font-size:11px;font-weight:800;">ВТБ</div>
+        <div>
+          <div class="bank-name">ВТБ</div>
+          <div class="bank-hint">&#8226;&#8226;&#8226;&#8226; 5555</div>
+        </div>
+        <div class="bank-check" id="chk-vtb">&#10003;</div>
+      </div>
+      <div class="bank-row" id="bank-sber" onclick="selectBank('sber')">
+        <div class="bank-ico" style="background:#eeffed;color:#21a038;font-size:11px;font-weight:800;">СБЕР</div>
+        <div>
+          <div class="bank-name">Сбербанк</div>
+          <div class="bank-hint">&#8226;&#8226;&#8226;&#8226; 4821</div>
+        </div>
+        <span class="bank-arr">&#8250;</span>
+      </div>
+      <div class="bank-row" id="bank-alfa" onclick="selectBank('alfa')">
+        <div class="bank-ico" style="background:#ffecec;color:#ef3124;font-size:11px;font-weight:800;">ALFA</div>
+        <div>
+          <div class="bank-name">Альфа-Банк</div>
+          <div class="bank-hint">&#8226;&#8226;&#8226;&#8226; 6407</div>
+        </div>
+        <span class="bank-arr">&#8250;</span>
+      </div>    </div>
+
+    <div class="card">
+      <div class="lbl">Детали</div>
+      <div class="total-row"><span class="tk">Назначение</span><span class="tv">На бургер</span></div>
+      <div class="total-row"><span class="tk">Комиссия</span><span class="tv ok">0 &#8381;</span></div>
+      <div class="total-row" style="border-top:2px solid #f2f3f7;margin-top:4px;padding-top:14px;">
+        <span class="tk" style="font-size:15px;font-weight:700;color:#1a1a2e;">К оплате</span>
+        <span id="total-lbl" style="font-size:19px;font-weight:800;color:#1db954;">100 &#8381;</span>
+      </div>
+    </div>
+
+    <button class="pay-btn" id="payBtn" onclick="startPay()">
+      <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" fill="white" opacity="0.9"/>
+      </svg>
+      Перевести <span id="pbamt">100</span> &#8381;
+    </button>
+    <div class="secure">&#128274; Платёж защищён ЦБ РФ &middot; Мгновенно</div>
+  </div>
+</div>
+
+<!-- PROCESSING PAGE -->
+<div class="page" id="p-proc">
+  <div class="proc-page">
+    <!-- <div class="proc-sbp">
+      <svg width="64" height="42" viewBox="0 0 64 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="64" height="42" rx="10" fill="#1db954"/>
+        <text x="32" y="28" text-anchor="middle" font-family="Arial" font-weight="800" font-size="18" fill="white">СБП</text>
+      </svg>
+    </div> -->
+    <div class="proc-ring"></div>
+    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:8px;">Переводим деньги</div>
+    <div style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:32px;">Обычно занимает несколько секунд</div>
+    <div class="proc-steps">
+      <div class="proc-step active" id="step1"><div class="proc-dot"></div>Проверка данных</div>
+      <div class="proc-step" id="step2"><div class="proc-dot"></div>Отправка в банк</div>
+      <div class="proc-step" id="step3"><div class="proc-dot"></div>Зачисление средств</div>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS PAGE -->
+<div class="page" id="p-ok">
+  <div class="ok-page">
+    <div class="ok-top">
+      <div class="ok-anim">
+        <div class="ok-circle">&#10003;</div>
+        <div class="ok-ring1"></div>
+        <div class="ok-ring2"></div>
+      </div>
+      <div class="ok-ttl">Переведено!</div>
+      <div class="ok-sub">Деньги уже у получателя</div>
+    </div>
+
+    <div class="ok-amount-block">
+      <div class="ok-amount" id="ok-sum">100 &#8381;</div>
+      <div class="ok-amt-lbl">Переведено Леониду С.</div>
+    </div>
+
+    <div class="ok-card">
+      <div class="ok-row"><span class="ok-l">Получатель</span><span class="ok-r">Леонид С.</span></div>
+      <div class="ok-row"><span class="ok-l">Счёт</span><span class="ok-r">Альфа банк &bullet;&bullet;&bullet;&bullet; 6407</span></div>
+      <div class="ok-row"><span class="ok-l">Назначение</span><span class="ok-r">На бургер</span></div>
+      <div class="ok-row"><span class="ok-l">Комиссия</span><span class="ok-r green">Бесплатно</span></div>
+      <div class="ok-row"><span class="ok-l">Дата</span><span class="ok-r" id="ok-date"></span></div>
+      <div class="ok-row"><span class="ok-l">Операция</span><span class="ok-r" id="ok-txid" style="font-size:12px;"></span></div>
+    </div>
+
+    <button class="ok-btn" onclick="goBack()">Готово</button>
+    <button class="ok-btn2">&#128196; Скачать чек</button>
+  </div>
+</div>
+
+<script>
+var curAmt = 100;
+var selBank = 'vtb';
+var bankCards = { vtb: '&#8226;&#8226;&#8226;&#8226; 5555', sber: '&#8226;&#8226;&#8226;&#8226; 4821', alfa: '&#8226;&#8226;&#8226;&#8226; 6407' };
+var bankNames = { vtb: 'ВТБ', sber: 'Сбербанк', alfa: 'Альфа-Банк' };
+
+function setAmt(v) {
+  curAmt = v;
+  document.getElementById('ainp').value = v.toLocaleString('ru-RU');
+  document.getElementById('pbamt').textContent = v.toLocaleString('ru-RU');
+  document.getElementById('total-lbl').textContent = v.toLocaleString('ru-RU') + ' \u20bd';
+  document.querySelectorAll('.chip').forEach(function(c) {
+    c.classList.toggle('on', parseInt(c.textContent.replace(/\D/g,'')) === v);
+  });
+}
+
+document.getElementById('ainp').addEventListener('input', function() {
+  var raw = this.value.replace(/\D/g,'');
+  curAmt = raw ? parseInt(raw) : 0;
+  document.getElementById('pbamt').textContent = curAmt.toLocaleString('ru-RU');
+  document.getElementById('total-lbl').textContent = curAmt.toLocaleString('ru-RU') + ' \u20bd';
+  document.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('on'); });
+});
+
+function selectBank(b) {
+  selBank = b;
+  ['vtb','sber','alfa'].forEach(function(id) {
+    var row = document.getElementById('bank-'+id);
+    var arr = row.querySelector('.bank-arr');
+    var chk = row.querySelector('.bank-check');
+    if (id === b) {
+      row.classList.add('bank-selected');
+      if (chk) chk.style.display = 'flex';
+      if (arr) arr.style.display = 'none';
+    } else {
+      row.classList.remove('bank-selected');
+      if (chk) chk.style.display = 'none';
+      if (arr) arr.style.display = 'block';
+    }
+  });
+}
+
+function show(id) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function startPay() {
+  var btn = document.getElementById('payBtn');
+  btn.disabled = true;
+  btn.textContent = 'Отправляем...';
+  show('p-proc');
+  setTimeout(function(){
+    document.getElementById('step2').className = 'proc-step done';
+    document.getElementById('step3').className = 'proc-step active';
+  }, 900);
+  setTimeout(function(){
+    document.getElementById('step3').className = 'proc-step done';
+  }, 1600);
+  setTimeout(function(){
+    var now = new Date();
+    document.getElementById('ok-sum').textContent = curAmt.toLocaleString('ru-RU') + ' \u20bd';
+    document.getElementById('ok-date').textContent = now.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('ok-txid').textContent = 'SBP-' + Math.random().toString(36).slice(2,10).toUpperCase();
+    var lbl = document.querySelector('.ok-amt-lbl');
+    lbl.textContent = '\u0421\u043f\u0438\u0441\u0430\u043d\u043e \u0441 ' + bankNames[selBank] + ' \u2022\u2022\u2022\u2022 ' + (bankCards[selBank]||'');
+    show('p-ok');
+  }, 2400);
+}
+
+function goBack() {
+  var btn = document.getElementById('payBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<svg viewBox="0 0 22 22" width="22" height="22" fill="none"><path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" fill="white" opacity="0.9"/></svg> \u041f\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438 <span id="pbamt">'+curAmt.toLocaleString('ru-RU')+'</span> \u20bd';
+  document.getElementById('step1').className='proc-step done';
+  document.getElementById('step2').className='proc-step active';
+  document.getElementById('step3').className='proc-step';
+  show('p-main');
+}
+
+selectBank('vtb');
+</script>
+</body>
+</html>
