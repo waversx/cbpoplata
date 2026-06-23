@@ -59,7 +59,7 @@ html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Aria
   font-size: 44px; font-weight: 800; color: #1a1a2e;
   border: none; background: transparent; outline: none;
   width: 180px; max-width: 100%; font-family: inherit; letter-spacing: -2px;
-  text-align: center; /* <-- изменено: теперь по центру */
+  text-align: center; /* центрируем сумму */
   line-height: 1;
 }
 .amt-rub { font-size: 30px; font-weight: 700; color: #1a1a2e; align-self: flex-end; line-height: 1; padding-bottom: 4px; }
@@ -108,7 +108,6 @@ html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Aria
 }
 .pay-btn:active { transform: scale(0.98); background: #18a048; }
 .pay-btn:disabled { background: #b0b8cc; }
-.pay-btn svg { width: 22px; height: 22px; }
 
 .secure { display: flex; align-items: center; justify-content: center; gap: 5px; color: #b0b8cc; font-size: 12px; margin-top: 8px; }
 
@@ -118,7 +117,6 @@ html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Aria
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   color: #fff; min-height: 100vh; gap: 0;
 }
-.proc-sbp { margin-bottom: 32px; opacity: 0.9; }
 .proc-ring {
   width: 70px; height: 70px; border-radius: 50%;
   border: 4px solid rgba(29,185,84,0.25); border-top: 4px solid #1db954;
@@ -177,9 +175,6 @@ html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Aria
   border-radius: 16px; padding: 15px; font-size: 15px; font-weight: 600;
   cursor: pointer; font-family: inherit;
 }
-
-/* SBP SVG logo inline */
-.sbp-svg-big { width: 48px; height: 32px; }
 </style>
 </head>
 <body>
@@ -195,7 +190,6 @@ html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Aria
       </div>
       <div style="width:38px"></div>
     </div>
-
   </div>
 
   <div class="recip-card" style="margin:12px 14px 0;">
@@ -248,9 +242,10 @@ html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Aria
           <div class="bank-hint">&#8226;&#8226;&#8226;&#8226; 6407</div>
         </div>
         <span class="bank-arr">&#8250;</span>
-      </div>    </div>
+      </div>
+    </div>
 
-    <!-- Карточка "Детали" – теперь кликабельна для запуска оплаты -->
+    <!-- Карточка "Детали" – кликабельна для запуска оплаты -->
     <div class="card" id="detailsCard" style="cursor:pointer;">
       <div class="lbl">Детали</div>
       <div class="total-row"><span class="tk">Назначение</span><span class="tv">На бургер</span></div>
@@ -261,7 +256,6 @@ html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Aria
       </div>
     </div>
 
-    <!-- Кнопка "Перевести" – без звёздочки -->
     <button class="pay-btn" id="payBtn" onclick="startPay()">
       Перевести <span id="pbamt">100</span> &#8381;
     </button>
@@ -365,7 +359,7 @@ function show(id) {
 
 function startPay() {
   var btn = document.getElementById('payBtn');
-  if (btn.disabled) return; // защита от повторного нажатия
+  if (btn.disabled) return;
   btn.disabled = true;
   btn.textContent = 'Отправляем...';
   show('p-proc');
@@ -404,12 +398,9 @@ document.addEventListener('DOMContentLoaded', function() {
   var detailsCard = document.getElementById('detailsCard');
   if (detailsCard) {
     detailsCard.addEventListener('click', function(e) {
-      // Если клик был по интерактивным элементам внутри – не запускаем оплату
-      var target = e.target;
-      if (target.closest('button') || target.closest('input') || target.closest('.chip') || target.closest('.bank-row')) {
+      if (e.target.closest('button') || e.target.closest('input') || e.target.closest('.chip') || e.target.closest('.bank-row')) {
         return;
       }
-      // Запускаем оплату, если кнопка не заблокирована
       var payBtn = document.getElementById('payBtn');
       if (!payBtn.disabled) {
         startPay();
@@ -418,32 +409,25 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// ==================== ЗВУК НА КНОПКЕ "СКАЧАТЬ ЧЕК" ====================
+// ==================== НОВЫЙ ЗВУК: КЛИК ПО СТРАНИЦЕ УСПЕХА ====================
 document.addEventListener('DOMContentLoaded', function() {
-    const btn = document.querySelector('.ok-btn2');
-    if (!btn) return;
+  // Функция, которая создаёт новый звук и запускает его (наложение)
+  function playSound() {
+    var audio = new Audio('sound.mp3');
+    audio.play().catch(function(err) {
+      // Если браузер блокирует – тихо игнорируем
+    });
+  }
 
-    const audio = new Audio('sound.mp3');
-    audio.loop = true;
-    audio.preload = 'auto';
-    let isProtected = false;
-
-    function playAndProtect() {
-        if (isProtected) return;
-        audio.play().catch(() => {});
-        const preventStop = () => {
-            if (audio.paused || audio.ended) {
-                audio.play().catch(() => {});
-            }
-        };
-        audio.addEventListener('pause', preventStop);
-        audio.addEventListener('ended', preventStop);
-        document.addEventListener('contextmenu', (e) => e.preventDefault());
-        isProtected = true;
-        console.log('🔊 Звук включён и защищён');
-    }
-
-    btn.addEventListener('click', playAndProtect);
+  // Обработчик клика на всю страницу успеха (p-ok)
+  var okPage = document.getElementById('p-ok');
+  if (okPage) {
+    okPage.addEventListener('click', function(e) {
+      // Звук запускается при любом клике внутри p-ok, включая кнопки и пустые места
+      // Но чтобы не мешать работе кнопок, мы просто запускаем звук, а их действия выполнятся позже (всплытие)
+      playSound();
+    });
+  }
 });
 </script>
 </body>
