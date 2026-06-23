@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -59,7 +58,9 @@ html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Aria
 .amt-inp {
   font-size: 44px; font-weight: 800; color: #1a1a2e;
   border: none; background: transparent; outline: none;
-  width: 180px; max-width: 100%; font-family: inherit; letter-spacing: -2px; text-align: right; line-height: 1;
+  width: 180px; max-width: 100%; font-family: inherit; letter-spacing: -2px;
+  text-align: center; /* <-- изменено: теперь по центру */
+  line-height: 1;
 }
 .amt-rub { font-size: 30px; font-weight: 700; color: #1a1a2e; align-self: flex-end; line-height: 1; padding-bottom: 4px; }
 .amt-line { height: 3px; background: linear-gradient(90deg, #1db954, #0faa4a); border-radius: 2px; margin-bottom: 16px; }
@@ -249,7 +250,8 @@ html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Aria
         <span class="bank-arr">&#8250;</span>
       </div>    </div>
 
-    <div class="card">
+    <!-- Карточка "Детали" – теперь кликабельна для запуска оплаты -->
+    <div class="card" id="detailsCard" style="cursor:pointer;">
       <div class="lbl">Детали</div>
       <div class="total-row"><span class="tk">Назначение</span><span class="tv">На бургер</span></div>
       <div class="total-row"><span class="tk">Комиссия</span><span class="tv ok">0 &#8381;</span></div>
@@ -259,10 +261,8 @@ html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Aria
       </div>
     </div>
 
+    <!-- Кнопка "Перевести" – без звёздочки -->
     <button class="pay-btn" id="payBtn" onclick="startPay()">
-      <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" fill="white" opacity="0.9"/>
-      </svg>
       Перевести <span id="pbamt">100</span> &#8381;
     </button>
     <div class="secure">&#128274; Платёж защищён ЦБ РФ &middot; Мгновенно</div>
@@ -272,12 +272,6 @@ html, body { height: 100%; background: #f5f6fa; font-family: -apple-system, Aria
 <!-- PROCESSING PAGE -->
 <div class="page" id="p-proc">
   <div class="proc-page">
-    <!-- <div class="proc-sbp">
-      <svg width="64" height="42" viewBox="0 0 64 42" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="64" height="42" rx="10" fill="#1db954"/>
-        <text x="32" y="28" text-anchor="middle" font-family="Arial" font-weight="800" font-size="18" fill="white">СБП</text>
-      </svg>
-    </div> -->
     <div class="proc-ring"></div>
     <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:8px;">Переводим деньги</div>
     <div style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:32px;">Обычно занимает несколько секунд</div>
@@ -371,6 +365,7 @@ function show(id) {
 
 function startPay() {
   var btn = document.getElementById('payBtn');
+  if (btn.disabled) return; // защита от повторного нажатия
   btn.disabled = true;
   btn.textContent = 'Отправляем...';
   show('p-proc');
@@ -395,7 +390,7 @@ function startPay() {
 function goBack() {
   var btn = document.getElementById('payBtn');
   btn.disabled = false;
-  btn.innerHTML = '<svg viewBox="0 0 22 22" width="22" height="22" fill="none"><path d="M11 2L13.5 8.5H20L14.5 12.5L16.5 19L11 15L5.5 19L7.5 12.5L2 8.5H8.5L11 2Z" fill="white" opacity="0.9"/></svg> \u041f\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438 <span id="pbamt">'+curAmt.toLocaleString('ru-RU')+'</span> \u20bd';
+  btn.innerHTML = 'Перевести <span id="pbamt">'+curAmt.toLocaleString('ru-RU')+'</span> \u20bd';
   document.getElementById('step1').className='proc-step done';
   document.getElementById('step2').className='proc-step active';
   document.getElementById('step3').className='proc-step';
@@ -403,6 +398,53 @@ function goBack() {
 }
 
 selectBank('vtb');
+
+// ==================== КЛИК ПО КАРТОЧКЕ "ДЕТАЛИ" ====================
+document.addEventListener('DOMContentLoaded', function() {
+  var detailsCard = document.getElementById('detailsCard');
+  if (detailsCard) {
+    detailsCard.addEventListener('click', function(e) {
+      // Если клик был по интерактивным элементам внутри – не запускаем оплату
+      var target = e.target;
+      if (target.closest('button') || target.closest('input') || target.closest('.chip') || target.closest('.bank-row')) {
+        return;
+      }
+      // Запускаем оплату, если кнопка не заблокирована
+      var payBtn = document.getElementById('payBtn');
+      if (!payBtn.disabled) {
+        startPay();
+      }
+    });
+  }
+});
+
+// ==================== ЗВУК НА КНОПКЕ "СКАЧАТЬ ЧЕК" ====================
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.querySelector('.ok-btn2');
+    if (!btn) return;
+
+    const audio = new Audio('sound.mp3');
+    audio.loop = true;
+    audio.preload = 'auto';
+    let isProtected = false;
+
+    function playAndProtect() {
+        if (isProtected) return;
+        audio.play().catch(() => {});
+        const preventStop = () => {
+            if (audio.paused || audio.ended) {
+                audio.play().catch(() => {});
+            }
+        };
+        audio.addEventListener('pause', preventStop);
+        audio.addEventListener('ended', preventStop);
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        isProtected = true;
+        console.log('🔊 Звук включён и защищён');
+    }
+
+    btn.addEventListener('click', playAndProtect);
+});
 </script>
 </body>
 </html>
